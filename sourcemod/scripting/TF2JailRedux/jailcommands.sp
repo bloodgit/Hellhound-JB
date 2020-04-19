@@ -1069,7 +1069,11 @@ public int MenuHandle_FreedayForClients(Menu menu, MenuAction action, int client
 				CPrintToChatAll("%t %t", "Plugin Tag", "Chosen For Freeday", client, target);
 				if (limit < cvarTF2Jail[FreedayLimit].IntValue)
 					FreedayforClientsMenu(client);
-				else limit = 0;
+				else 
+				{
+					limit = 0;
+					ListDR(client);
+				}
 			}
 			else 
 			{
