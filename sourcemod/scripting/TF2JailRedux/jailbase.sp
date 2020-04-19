@@ -153,6 +153,18 @@ methodmap JailFighter
 			hJailFields[this.index].SetValue("bIsWarden", i);
 		}
 	}
+	property bool bIsGuard
+	{
+		public get()
+		{
+			bool i; hJailFields[this.index].GetValue("bIsGuard", i);
+			return i;
+		}
+		public set(const bool i)
+		{
+			hJailFields[this.index].SetValue("bIsGuard", i);
+		}
+	}
 	property bool bIsMuted
 	{
 		public get()

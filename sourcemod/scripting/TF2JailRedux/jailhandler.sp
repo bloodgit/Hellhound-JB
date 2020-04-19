@@ -691,6 +691,143 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] weaponname
  	}
  	return Call_OnCalcAttack(base, weapon, weaponname, result);
 }
+
+public void ListDR(int client)
+{
+	if (IsVoteInProgress())
+		return;
+		
+	Menu menu = new Menu(ListDRsMenu);
+	menu.SetTitle("Select a Death Request");
+	menu.AddItem("1", "Freeze All Blues");
+	menu.AddItem("2", "Unfreeze All Blues");
+	menu.AddItem("3", "Slay All Blues");
+	menu.AddItem("4", "Teleport All Blues");
+	menu.AddItem("5", "Powerplay");
+	menu.ExitButton = true;
+	menu.Display(client, -1);
+}
+
+void GetCollisionPoint(int client, float pos[3])
+{
+	float vOrigin[3];
+	float vAngles[3];
+	
+	GetClientEyePosition(client, vOrigin);
+	GetClientEyeAngles(client, vAngles);
+	
+	Handle trace = TR_TraceRayFilterEx(vOrigin, vAngles, MASK_SOLID, RayType_Infinite, TraceEntityFilterPlayer);
+	
+	if (TR_DidHit(trace))
+	{
+		TR_GetEndPosition(pos, trace);
+		delete trace;
+		
+		return;
+	}
+	
+	delete trace;
+}
+
+bool TraceEntityFilterPlayer(int entity, int contentsMask)
+{
+	return entity > MaxClients;
+}
+
+public int ListDRsMenu(Menu menu, MenuAction action, int param1, int param2)
+{
+	switch (action)
+	{
+		case MenuAction_Start:
+		{
+			PrintToServer("Displaying menu"); // Log it
+		}
+		
+		case MenuAction_Display:
+		{
+			PrintToServer("Client %d was sent menu with panel %x", param1, param2);
+		}
+		
+		case MenuAction_Select:
+		{
+			char info[24];
+			GetMenuItem(menu, param2, info, sizeof(info));
+			
+			switch (param2)
+			{
+				case 0:
+				{
+					ListDR(param1);
+					CPrintToChatAll("%t %t", "Plugin Tag", "LR Menu Frozen All Blues", param1);
+					ServerCommand("sm_freeze @blue -1");
+				}
+				case 1:
+				{
+					ListDR(param1);
+					CPrintToChatAll("%t %t", "Plugin Tag", "LR Menu Unfroze All Blues", param1);
+					ServerCommand("sm_freeze @blue 0");
+				}
+				case 2:
+				{
+					ListDR(param1);
+					CPrintToChatAll("%t %t", "Plugin Tag", "LR Menu Slay All Blues", param1);
+					ServerCommand("sm_slay @blue");
+				}
+				case 3:
+				{
+					ListDR(param1);
+					CPrintToChatAll("%t %t", "Plugin Tag", "LR Menu Bring All Blues", param1);
+					for (int i = 1; i <= MaxClients; i++)
+					{
+						if (IsClientInGame(i) && IsPlayerAlive(i) && TF2_GetClientTeam(i) == TFTeam_Blue)
+						{
+							float fTeleportOrigin[3];
+							float fPlayerOrigin[3];
+							
+							GetCollisionPoint(param1, fPlayerOrigin);
+							
+							fTeleportOrigin[0] = fPlayerOrigin[0];
+							fTeleportOrigin[1] = fPlayerOrigin[1];
+							fTeleportOrigin[2] = (fPlayerOrigin[2] + 4);
+							
+							TeleportEntity(i, fTeleportOrigin, NULL_VECTOR, NULL_VECTOR);
+						}
+					}
+				}
+				case 4:
+				{
+					ListDR(param1);
+					CPrintToChatAll("%t %t", "Plugin Tag", "LR Menu PowerPlay", param1);
+					TF2_SetPlayerPowerPlay(param1, true);
+				}
+			}
+		}
+		
+		case MenuAction_Cancel:
+		{
+			PrintToServer("Client %d's menu was cancelled for reason %d", param1, param2);
+		}
+		
+		case MenuAction_End:
+		{
+			delete menu;
+		}
+		
+		case MenuAction_DrawItem:
+		{
+			int style;
+			char info[32];
+			menu.GetItem(param2, info, sizeof(info), style);
+		}
+		
+		case MenuAction_DisplayItem:
+		{
+			char info[32];
+			menu.GetItem(param2, info, sizeof(info));
+		}
+	}
+}
+
 /**
  *	Add lrs to the LR menu obviously
 */
@@ -803,6 +940,7 @@ public int ListLRsMenu(Menu menu, MenuAction action, int client, int select)
 			{
 				case -1:	// Random
 				{
+					ListDR(client);
 					CPrintToChatAll("%t %t", "Plugin Tag", "Random Select", client);
 					int randlr = GetRandomInt(2, LRMAX);		// TODO: Make this not pick LRs that have reached their maximum
 					gamemode.iLRPresetType = randlr;
@@ -826,11 +964,13 @@ public int ListLRsMenu(Menu menu, MenuAction action, int client, int select)
 				}
 				case Custom:
 				{
+					ListDR(client);
 					CPrintToChatAll("%t %t", "Plugin Tag", "Custom Select", client);
 					base.iCustom = base.userid;
 				}
 				case FreedaySelf:
 				{
+					ListDR(client);
 					CPrintToChatAll("%t %t", "Plugin Tag", "Freeday Self Select", client);
 					base.bIsQueuedFreeday = true;
 				}
@@ -839,15 +979,51 @@ public int ListLRsMenu(Menu menu, MenuAction action, int client, int select)
 					CPrintToChatAll("%t %t", "Plugin Tag", "Freeday Other Select", client);
 					FreedayforClientsMenu(client);
 				}
-				case FreedayAll:	CPrintToChatAll("%t %t", "Plugin Tag", "Freeday All Select", client);
-				case GuardMelee:	CPrintToChatAll("%t %t", "Plugin Tag", "Guard Melee Select", client);
-				case HHHDay:		CPrintToChatAll("%t %t", "Plugin Tag", "HHHDay Select", client);
-				case TinyRound:		CPrintToChatAll("%t %t", "Plugin Tag", "Tiny Round Select", client);
-				case HotPrisoner:	CPrintToChatAll("%t %t", "Plugin Tag", "Hot Prisoner Select", client);
-				case Gravity:		CPrintToChatAll("%t %t", "Plugin Tag", "Gravity Round Select", client);
-				case SWA:			CPrintToChatAll("%t %t", "Plugin Tag", "Automobile Start", client);
-				case Warday:		CPrintToChatAll("%t %t", "Plugin Tag", "Warday Select", client);
-				case ClassWars:		CPrintToChatAll("%t %t", "Plugin Tag", "ClassWars Select", client);
+				case FreedayAll:	
+				{
+					ListDR(client);
+					CPrintToChatAll("%t %t", "Plugin Tag", "Freeday All Select", client);
+				}
+				case GuardMelee:
+				{	
+					ListDR(client);					
+					CPrintToChatAll("%t %t", "Plugin Tag", "Guard Melee Select", client);
+				}
+				case HHHDay:	
+				{
+					ListDR(client);
+					CPrintToChatAll("%t %t", "Plugin Tag", "HHHDay Select", client);
+				}
+				case TinyRound:	
+				{	
+					ListDR(client);
+					CPrintToChatAll("%t %t", "Plugin Tag", "Tiny Round Select", client);
+				}
+				case HotPrisoner:	
+				{
+					ListDR(client);
+					CPrintToChatAll("%t %t", "Plugin Tag", "Hot Prisoner Select", client);
+				}
+				case Gravity: 
+				{
+					ListDR(client);
+					CPrintToChatAll("%t %t", "Plugin Tag", "Gravity Round Select", client);
+				}
+				case SWA:			
+				{
+					ListDR(client);
+					CPrintToChatAll("%t %t", "Plugin Tag", "Automobile Start", client);
+				}
+				case Warday: 
+				{
+					ListDR(client);
+					CPrintToChatAll("%t %t", "Plugin Tag", "Warday Select", client);
+				}
+				case ClassWars:	
+				{
+					ListDR(client);
+					CPrintToChatAll("%t %t", "Plugin Tag", "ClassWars Select", client);
+				}
 			}
 
 			gamemode.iLRPresetType = request;

@@ -1,3 +1,25 @@
+int g_iLastGuard; bool g_bCanLastGuard; bool g_bLastGuardPrompted; bool g_bLastGuardMenuOpen;
+int g_iGlowRef[32] =  { INVALID_ENT_REFERENCE, ... };
+#define BASE_COLOR 0xCCCCCC
+#define GUARD_COLOR 0x0094FF
+#define LG_COLOR 0x0026FF
+#define LoopAlivePlayers(%1) for (int %1 = 1; %1 <= MaxClients; ++%1) if (IsClientInGame(%1) && IsPlayerAlive(%1))
+
+int GetTeamPlayersAlive(TFTeam iTeam)
+{
+	int iCount;
+	
+	LoopAlivePlayers(i)
+	{
+		if (TF2_GetClientTeam(i) == iTeam)
+		{
+			iCount++;
+		}
+	}
+	
+	return iCount;
+}
+
 public Action OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if (!bEnabled.BoolValue)
@@ -20,6 +42,11 @@ public Action OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 		player.GiveFreeday();
 		player.TeleportToPosition(FREEDAY);
 	}
+	
+	RemoveGlow(client);
+	
+	if (GetClientOfUserId(g_iLastGuard) && TF2_GetClientTeam(client) == TFTeam_Red)
+		ApplyGlow(client);
 
 	if (team == BLU)
 	{
@@ -68,16 +95,114 @@ public Action OnPlayerHurt(Event event, const char[] name, bool dontBroadcast)
 	return Plugin_Continue;
 }
 
+void ShowLastGuardMenu(int iClient)
+{
+	g_bLastGuardMenuOpen = true;
+	g_bLastGuardPrompted = true;
+	Menu hLGMenu = new Menu(Menu_LastGuardMenu);
+	hLGMenu.SetTitle("Would you like to last guard?");
+	hLGMenu.AddItem("1", "Yes, I would like to kill all Prisoners!");
+	hLGMenu.AddItem("2", "No, I would like to remain peaceful.");
+	hLGMenu.Display(iClient, MENU_TIME_FOREVER);
+}
+
+public void Frame_CheckLastGuard(bool bWardenTimer)
+{
+	int iCount = 0;
+	int iBlues = -1;
+	for (int i = 1; i <= MaxClients; i++)if (IsClientInGame(i) && IsPlayerAlive(i) && TF2_GetClientTeam(i) == TFTeam_Blue)
+	{
+		iCount++;
+		iBlues = i;
+	}
+	
+	if (!gamemode.bIsLRInUse)
+	{
+		if (iCount == 1 && iBlues != -1 && !GetClientOfUserId(g_iLastGuard) && gamemode.iRoundState == StateRunning && g_bCanLastGuard)
+		{
+			if (!bWardenTimer && !g_bLastGuardPrompted)
+			{
+				CPrintToChatAll("%t %t", "Plugin Tag", "Last Guard Question");
+				PrintCenterTextAll("%t", "Last Guard Question");
+				ShowLastGuardMenu(iBlues);
+			}
+			else
+			{
+				if (g_bLastGuardMenuOpen)
+					CancelClientMenu(iBlues);
+				
+				g_bLastGuardPrompted = true;
+				g_iLastGuard = GetClientUserId(iBlues);
+				//RefreshStatus(iBlue);
+				
+				for (int i = 1; i <= MaxClients; i++)if (IsClientInGame(i))
+				{
+					JailFighter player = JailFighter(i);
+					
+					if (TF2_GetClientTeam(i) == TFTeam_Blue && IsPlayerAlive(i))
+						player.WardenUnset();
+					
+					if (TF2_GetClientTeam(i) == TFTeam_Red && IsPlayerAlive(i))
+						ApplyGlow(i);
+					
+					if (player.bIsFreeday)
+						player.RemoveFreeday();
+				}
+			}
+		}
+	}
+}
+
 public Action OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	if (!bEnabled.BoolValue || gamemode.iRoundState == StateDisabled)
 		return Plugin_Continue;
-
-	JailFighter victim = JailFighter.OfUserId( event.GetInt("userid") );	
-	JailFighter attacker = JailFighter.OfUserId( event.GetInt("attacker") );
+		
+	int iClient = GetClientOfUserId(event.GetInt("userid"));
+	int iAttacker = GetClientOfUserId(event.GetInt("attacker"));
+	
+	JailFighter victim = JailFighter(iClient);
+	JailFighter attacker = JailFighter(iAttacker);
+	
+	char victimstring[64]; //Riotline had a good idea on this, compared to me atleast. (I just execute it better ;) )
+	char attackerstring[64];
+	
+	if (cvarTF2Jail[KillFeed])
+	{
+		if (iAttacker <= 0)
+			return Plugin_Handled;
+		
+		if (IsClientInGame(iClient) && TF2_GetClientTeam(iClient) == TFTeam_Blue && victim.bIsWarden)
+			victimstring = "{blue}(WARDEN) ";
+		else if (IsClientInGame(iClient) && TF2_GetClientTeam(iClient) == TFTeam_Blue && victim.bIsGuard)
+			victimstring = "{lightblue}(GUARD) ";
+		else if (IsClientInGame(iClient) && TF2_GetClientTeam(iClient) == TFTeam_Red && victim.bIsRebel)
+			victimstring = "{goldenrod}(REBEL) ";
+		else if (IsClientInGame(iClient) && TF2_GetClientTeam(iClient) == TFTeam_Red && !victim.bIsRebel)
+			victimstring = "{grey}(PRISONER) ";
+		else if (IsClientInGame(iClient) && TF2_GetClientTeam(iClient) == TFTeam_Red && victim.bIsFreeday)
+			victimstring = "{gold}(FREEDAY) ";
+		
+		if (IsClientInGame(iAttacker) && IsPlayerAlive(iAttacker) && TF2_GetClientTeam(iAttacker) == TFTeam_Blue && attacker.bIsWarden)
+			attackerstring = "{blue}(WARDEN) ";
+		else if (IsClientInGame(iAttacker) && IsPlayerAlive(iAttacker) && TF2_GetClientTeam(iAttacker) == TFTeam_Blue && attacker.bIsGuard)
+			attackerstring = "{lightblue}(GUARD) ";
+		else if (IsClientInGame(iAttacker) && IsPlayerAlive(iAttacker) && TF2_GetClientTeam(iAttacker) == TFTeam_Red && attacker.bIsRebel)
+			attackerstring = "{goldenrod}(REBEL) ";
+		else if (IsClientInGame(iAttacker) && IsPlayerAlive(iAttacker) && TF2_GetClientTeam(iAttacker) == TFTeam_Red && !attacker.bIsRebel)
+			attackerstring = "{grey}(PRISONER) ";
+		else if (IsClientInGame(iAttacker) && IsPlayerAlive(iAttacker) && TF2_GetClientTeam(iAttacker) == TFTeam_Red && attacker.bIsFreeday)
+			attackerstring = "{gold}(FREEDAY) ";
+		
+		if (iClient != iAttacker)
+			CPrintToChatAll("{orange}Hellhound {white}| %s{limegreen}%N {white}killed %s{limegreen}%N", attackerstring, attacker, victimstring, victim);
+	}
 
 	if (gamemode.bTF2Attribs)
 		TF2Attrib_RemoveAll(victim.index);
+		
+	if (TF2_GetClientTeam(iClient) == TFTeam_Blue)
+		RequestFrame(Frame_CheckLastGuard);
 
 	if (IsClientValid(attacker.index))
 		if (!gamemode.bDisableKillSpree)
@@ -112,6 +237,64 @@ public Action OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
 	return Plugin_Continue;
 }
 
+public int Menu_LastGuardMenu(Menu hLGMenu, MenuAction iAction, int iClient, int iParam2)
+{
+	switch (iAction)
+	{
+		case MenuAction_Select:
+		{
+			if (iClient < 1 || iClient > MaxClients || !IsClientInGame(iClient) || !IsPlayerAlive(iClient) || gamemode.iRoundState != StateRunning)
+				return;
+			
+			char sInfo[32]; char sDisplay[MAX_NAME_LENGTH];
+			hLGMenu.GetItem(iParam2, sInfo, sizeof(sInfo), _, sDisplay, sizeof(sDisplay));
+			
+			if (iParam2 == 0)
+			{	
+				JailFighter player = JailFighter(iClient);
+				
+				CPrintToChatAll("{limegreen}Fiasco {white}| {limegreen}%N{white} has chosen to {limegreen}Last Guard{white}!", iClient);
+				PrintCenterTextAll("%N has chosen to Last Guard!", iClient);
+				gamemode.bIsWardenLocked = true;
+				g_iLastGuard = GetClientUserId(iClient);
+				
+				if (GetClientOfUserId(player.bIsWarden))
+					player.WardenUnset();
+				
+				for (int i = 1; i <= MaxClients; i++)
+				{
+					if (IsClientInGame(i))
+					{
+						if (TF2_GetClientTeam(i) == TFTeam_Red && IsPlayerAlive(i))
+							ApplyGlow(i);
+						
+						if (player.bIsFreeday)
+							player.RemoveFreeday();
+						
+						float time = float(gamemode.iTimeLeft);
+						
+						ClearSyncHud(i, g_hWardenHud);
+						SetHudTextParams(-1.0, 0.2, time, 0, 105, 255, 255, 2, 0.0, 0.1, 0.1);
+						ShowSyncHudText(i, g_hWardenHud, "Last Guard Active!");
+					}
+				}
+			}
+			else if (iParam2 == 1)
+			{
+				CPrintToChatAll("{orange}Hellhound {white}| {orange}%N{white} has chosen to not activate {orange}Last Guard{white}.", iClient);
+				PrintCenterTextAll("%N has chosen to stay peaceful.", iClient);
+				g_bCanLastGuard = false;
+			}
+		}
+		
+		case MenuAction_End:
+		{
+			g_bLastGuardMenuOpen = false;
+			CloseHandle(hLGMenu);
+		}
+	}
+}
+
 public Action OnPreRoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	if (!bEnabled.BoolValue)
@@ -123,6 +306,7 @@ public Action OnPreRoundStart(Event event, const char[] name, bool dontBroadcast
 		return Plugin_Continue;
 	}
 
+	g_iLastGuard = 0;
 	JailFighter player;
 	int i;
 	if (gamemode.bIsMapCompatible)
@@ -194,6 +378,9 @@ public Action OnArenaRoundStart(Event event, const char[] name, bool dontBroadca
 	gamemode.bFirstDoorOpening = false;
 	gamemode.iLivingMuteType = cvarTF2Jail[LivingMuteType].IntValue;
 	gamemode.iMuteType = cvarTF2Jail[MuteType].IntValue;
+	
+	g_bCanLastGuard = true;
+	g_bLastGuardPrompted = false;
 
 	int i;
 	JailFighter player;
@@ -201,6 +388,8 @@ public Action OnArenaRoundStart(Event event, const char[] name, bool dontBroadca
 	CreateTimer(1.0, Timer_Round, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 
 	SetPawnTimer(CheckLivingPlayers, 0.1);
+	
+	CreateTimer(1.0, CheckGuard);
 
 	if (cvarTF2Jail[Balance].BoolValue)
 		gamemode.AutobalanceTeams();
@@ -284,11 +473,32 @@ public Action OnArenaRoundStart(Event event, const char[] name, bool dontBroadca
 		{
 			gamemode.bIsWardenLocked = true;
 			SetPawnTimer(EnableWarden, time, gamemode.iRoundCount);
+			RequestFrame(Frame_CheckLastGuard, true);
 		}
 	}
+	
+	if (GetTeamPlayersAlive(TFTeam_Blue) >> 1)
+		RequestFrame(Frame_CheckLastGuard);
 
 	gamemode.flMusicTime = GetGameTime() + 1.4;
 	return Plugin_Continue;
+}
+
+public Action CheckGuard(Handle timer)
+{
+	for (int i = 1; i <= MaxClients; i++) // I broke this down into steps to avoid confusing me when reading over it again.
+	{
+		if (IsClientInGame(i) && IsPlayerAlive(i) && TF2_GetClientTeam(i) == TFTeam_Blue)
+		{
+			JailFighter player = JailFighter(i);
+			if (!player.bIsWarden)
+			{
+				player.bIsGuard = true;
+			}
+			else
+				player.bIsGuard = false;
+		}
+	}
 }
 
 public Action OnRoundEnded(Event event, const char[] name, bool dontBroadcast)
@@ -448,4 +658,45 @@ public Action UberDeployed(Event event, const char[] name, bool dontBroadcast)
 
 	ManageUberDeployed(patient, medic, event);
 	return Plugin_Continue;
+}
+
+void ApplyGlow(int iClient)
+{
+	RemoveGlow(iClient);
+	int iGlow = CreateGlow(iClient);
+	g_iGlowRef[iClient - 1] = EntIndexToEntRef(iGlow);
+}
+
+int CreateGlow(int iEnt)
+{
+	char oldEntName[64];
+	GetEntPropString(iEnt, Prop_Data, "m_iName", oldEntName, sizeof(oldEntName));
+	
+	char strName[126], strClass[64];
+	GetEntityClassname(iEnt, strClass, sizeof(strClass));
+	Format(strName, sizeof(strName), "%s%i", strClass, iEnt);
+	DispatchKeyValue(iEnt, "targetname", strName);
+	
+	int ent = CreateEntityByName("tf_glow");
+	DispatchKeyValue(ent, "targetname", "WallHax");
+	DispatchKeyValue(ent, "target", strName);
+	DispatchKeyValue(ent, "Mode", "0");
+	DispatchSpawn(ent);
+	int color[] =  { 0, 255, 255, 255 };
+	SetVariantColor(color);
+	AcceptEntityInput(ent, "SetGlowColor");
+	AcceptEntityInput(ent, "Enable");
+	
+	SetEntPropString(iEnt, Prop_Data, "m_iName", oldEntName);
+	
+	return ent;
+}
+
+void RemoveGlow(int iClient)
+{
+	int iGlow = EntRefToEntIndex(g_iGlowRef[iClient - 1]);
+	if (IsValidEntity(iGlow))
+		AcceptEntityInput(iGlow, "Kill");
+	
+	g_iGlowRef[iClient - 1] = INVALID_ENT_REFERENCE;
 }
