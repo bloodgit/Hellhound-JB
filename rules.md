@@ -54,6 +54,7 @@
 - If you are a LR reciever, once the LR has been picked you must give a death request.
 - Overall, use common sense, if something doesn't feel right to the players, it's probably not allowed.
 - Creating loopholes in these rules will result in you being banned.
+- When playing special LRs such as VSH or Prophunt, you are not allowed inside of climb or obstacle course, and you are not allowed to camp in areas which involve the opposite team to complete "tasks" such as finishing a course to reach you.
 
 **Blue Team Rules**
 
