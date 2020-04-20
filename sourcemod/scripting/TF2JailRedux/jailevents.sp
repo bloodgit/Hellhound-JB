@@ -20,6 +20,9 @@ int GetTeamPlayersAlive(TFTeam iTeam)
 	return iCount;
 }
 
+// Anti late spawn shit right here boss.
+bool CheckClass[MAXPLAYERS + 1];
+
 public Action OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if (!bEnabled.BoolValue)
@@ -73,10 +76,36 @@ public Action OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 	gamemode.ToggleMuting(player);
 	ManageSpawn(player, event);
 	SetPawnTimer(PrepPlayer, 0.2, player.userid);
+	
+	if(CheckClass[client])
+		CreateTimer(0.1, SlayPlayer, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+		
+	g_bRespawned[client] = false;
 
 	player.flHealTime = 0.0;
 
 	return Plugin_Continue;
+}
+
+public Action SlayPlayer(Handle timer, any userid)
+{
+	int client = GetClientOfUserId(userid);
+	
+	if(gamemode.iRoundState == StateRunning && !g_bRespawned[userid])
+	{
+		SDKHooks_TakeDamage(client, client, client, 450.0);
+		CreateTimer(1.0, FailsafeSlay, userid, TIMER_FLAG_NO_MAPCHANGE);
+	}
+}
+
+public Action FailsafeSlay(Handle timer, any userid)
+{
+	int client = GetClientOfUserId(userid);
+	
+	if(gamemode.iRoundState == StateRunning && g_bRespawned[userid])
+	{
+		SDKHooks_TakeDamage(client, client, client, 450.0);
+	}
 }
 
 public Action OnPlayerHurt(Event event, const char[] name, bool dontBroadcast)
@@ -636,7 +665,18 @@ public Action OnChangeClass(Event event, const char[] name, bool dontBroadcast)
 
 	if (IsClientValid(player.index))
 		SetPawnTimer(PrepPlayer, 0.2, player.userid);
+		
+	if(!CheckClass[player.index])
+		CreateTimer(0.5, ResetClassChange, player.userid, TIMER_FLAG_NO_MAPCHANGE);
+		
+	CheckClass[player.index] = true;
 
+	return Plugin_Continue;
+}
+
+public Action ResetClassChange(Handle timer, int client)
+{
+	CheckClass[client] = false;
 	return Plugin_Continue;
 }
 

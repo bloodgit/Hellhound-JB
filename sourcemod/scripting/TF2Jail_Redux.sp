@@ -61,6 +61,8 @@
 
 int g_iMarker[2] =  { INVALID_ENT_REFERENCE, ... };
 
+bool g_bRespawned[MAXPLAYERS + 1];
+
 enum	// Cvar name
 {
 	Balance = 0,
@@ -363,6 +365,8 @@ public void OnPluginStart()
 	RegAdminCmd("sm_reloadjailcfg", AdminReloadCFG, ADMFLAG_GENERIC, "Reload TF2Jail Redux's config file.");
 	RegAdminCmd("sm_jtime", AdminJailTime, ADMFLAG_GENERIC, "Set the jail round time.");
 	RegAdminCmd("sm_jt", AdminJailTime, ADMFLAG_GENERIC, "Set the jail round time.");
+	RegAdminCmd("sm_rp", Command_Respawn, ADMFLAG_SLAY, "Respawn a player");
+	RegAdminCmd("sm_respawn", Command_Respawn, ADMFLAG_SLAY, "Respawn a player");
 
 	RegAdminCmd("sm_setpreset", SetPreset, ADMFLAG_GENERIC, "Set gamemode.iLRPresetType. (DEBUGGING)");
 	RegAdminCmd("sm_itype", Type, ADMFLAG_GENERIC, "gamemode.iLRType. (DEBUGGING)");
