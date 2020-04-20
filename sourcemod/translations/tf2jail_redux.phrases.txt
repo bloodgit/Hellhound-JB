@@ -828,12 +828,12 @@
 		"en"		"An admin has respawned {1}"
 	}
 	
-	"Muting System Unmuted"
+	"Unmuted"
 	{
 		"en"		"You have been unmuted."
 	}
 	
-	"Muting System Muted"
+	"Muted"
 	{
 		"en"		"You have been muted."
 	}
@@ -887,7 +887,7 @@
 	
 	"LR RRD Chosen"
 	{
-		"#format"	"{1:N}
+		"#format"	"{1:N}"
 		"en"		"{1} has chosen to do Rapid Rockets Day next round."
 	}
 	

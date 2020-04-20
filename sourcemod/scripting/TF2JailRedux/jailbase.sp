@@ -12,7 +12,7 @@ char
 int
 	iHalo,									// Particle
 	iLaserBeam,								// Particle
-	iHalo2,									// Particle
+	//iHalo2,									// Particle
 	iHHHParticle[MAX_TF_PLAYERS][3],		// HHH particles
 	iRebelColors[4], 						// Rebel colors
 	iFreedayColors[4], 						// Freeday colors
@@ -20,7 +20,7 @@ int
 ;
 
 float
-	vecOld[MAX_TF_PLAYERS][3],				// Freeday beam vector
+	//vecOld[MAX_TF_PLAYERS][3],				// Freeday beam vector
 	vecFreedayPosition[3], 					// Freeday map position
 	vecWardayBlu[3], 						// Blue warday map position
 	vecWardayRed[3],						// Red warday map position
@@ -643,6 +643,8 @@ methodmap JailFighter
 
 		if (cvarTF2Jail[RendererColor].BoolValue)
 			SetEntityRenderColor(this.index, iFreedayColors[0], iFreedayColors[1], iFreedayColors[2], iFreedayColors[3]);
+			
+		SetEntProp(this.index, Prop_Data, "m_takedamage", 1, 1);
 
 		Call_OnFreedayGiven(this);
 	}
@@ -669,6 +671,8 @@ methodmap JailFighter
 
 		if (cvarTF2Jail[RendererColor].BoolValue)
 			SetEntityRenderColor(this.index);
+			
+		SetEntProp(this.index, Prop_Data, "m_takedamage", 2, 1);
 
 		Call_OnFreedayRemoved(this);
 	}
@@ -1113,6 +1117,8 @@ methodmap JailFighter
 			SetEntityRenderColor(this.index, iRebelColors[0], iRebelColors[1], iRebelColors[2], iRebelColors[3]);
 
 		CPrintToChatAll("%t %t", "Plugin Tag", "Prisoner Has Rebelled", this.index);
+		
+		SetEntProp(this.index, Prop_Data, "m_takedamage", 2, 1);
 
 		float time = cvarTF2Jail[RebelTime].FloatValue;
 		if (time != 0.0)

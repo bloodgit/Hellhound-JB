@@ -195,7 +195,16 @@ public Action OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
 			attackerstring = "{gold}(FREEDAY) ";
 		
 		if (iClient != iAttacker)
-			CPrintToChatAll("{orange}Hellhound {white}| %s{limegreen}%N {white}killed %s{limegreen}%N", attackerstring, attacker, victimstring, victim);
+		{
+			for (int i = 1; i <= MaxClients; i++) if (IsClientInGame(i))
+			{
+				if (CheckCommandAccess(i, "", ADMFLAG_GENERIC, true)) 
+					CPrintToChat(i, "{orange}Hellhound {white}| %s{limegreen}%N {white}killed %s{limegreen}%N", attackerstring, attacker, victimstring, victim);
+				else
+					CPrintToChat(i, "{orange}Hellhound {white}| %s{white}killed %s", attackerstring, victimstring);
+			}
+		}
+			
 	}
 
 	if (gamemode.bTF2Attribs)
@@ -253,7 +262,7 @@ public int Menu_LastGuardMenu(Menu hLGMenu, MenuAction iAction, int iClient, int
 			{	
 				JailFighter player = JailFighter(iClient);
 				
-				CPrintToChatAll("{limegreen}Fiasco {white}| {limegreen}%N{white} has chosen to {limegreen}Last Guard{white}!", iClient);
+				CPrintToChatAll("{orange}Hellbound{white}| {orange}%N{white} has chosen to {orange}Last Guard{white}!", iClient);
 				PrintCenterTextAll("%N has chosen to Last Guard!", iClient);
 				gamemode.bIsWardenLocked = true;
 				g_iLastGuard = GetClientUserId(iClient);
@@ -463,6 +472,26 @@ public Action OnArenaRoundStart(Event event, const char[] name, bool dontBroadca
 		if (time != 0.0)
 			SetPawnTimer(Open_Doors, time, gamemode.iRoundCount);
 	}
+	
+	if(cvarTF2Jail[RoundStartMuteTime].FloatValue >> 0.0)
+	{
+		for (i = MaxClients; i; --i)
+		{
+			if (!IsClientInGame(i))
+				continue;
+			if (!IsPlayerAlive(i))
+				continue;
+			
+			if(TF2_GetClientTeam(i) == TFTeam_Red)
+			{
+				player = JailFighter(i);
+				player.MutePlayer();
+			}
+		}
+		
+		CPrintToChatAll("{orange}Hellhound {white}| All reds have been muted for {orange}%i {white}seconds", cvarTF2Jail[RoundStartMuteTime].IntValue);
+		CreateTimer(cvarTF2Jail[RoundStartMuteTime].FloatValue, UnmuteReds); 
+	}
 
 	time = cvarTF2Jail[WardenDelay].FloatValue;
 	if (time != 0.0)
@@ -482,6 +511,27 @@ public Action OnArenaRoundStart(Event event, const char[] name, bool dontBroadca
 
 	gamemode.flMusicTime = GetGameTime() + 1.4;
 	return Plugin_Continue;
+}
+
+public Action UnmuteReds(Handle timer)
+{
+	for (int i = MaxClients; i; --i)
+	{
+		if (!IsClientInGame(i))
+			continue;
+		if (!IsPlayerAlive(i))
+			continue;
+			
+		JailFighter player;
+
+		if(TF2_GetClientTeam(i) == TFTeam_Red)
+		{
+			player = JailFighter(i);
+			player.UnmutePlayer();
+		}
+	}
+	
+	CPrintToChatAll("{orange}Hellhound {white}| All reds have been unmuted.");
 }
 
 public Action CheckGuard(Handle timer)
@@ -509,6 +559,7 @@ public Action OnRoundEnded(Event event, const char[] name, bool dontBroadcast)
 	JailFighter player;
 	int i, x;
 	bool attrib = gamemode.bTF2Attribs;
+	g_iLastGuard = 0;
 
 	for (i = MaxClients; i; --i)
 	{

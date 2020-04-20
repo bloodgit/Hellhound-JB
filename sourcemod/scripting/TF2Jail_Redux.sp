@@ -119,7 +119,8 @@ enum	// Cvar name
 	WardenInvite,
 	WardenToggleMuting,
 	MedicLoseFreeday,
-	FreedayBeamLifetime,
+	RoundStartMuteTime,
+	//FreedayBeamLifetime,
 	Version
 };
 
@@ -248,7 +249,8 @@ public void OnPluginStart()
 	cvarTF2Jail[WardenInvite] 				= CreateConVar("sm_tf2jr_warden_invite", "0", "Allow the Warden to invite players to the Guards' team?", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	cvarTF2Jail[WardenToggleMuting] 		= CreateConVar("sm_tf2jr_warden_mute", "0", "Allow the Warden to toggle plugin muting?", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	cvarTF2Jail[MedicLoseFreeday] 			= CreateConVar("sm_tf2jr_medic_freeday", "2", "If a Medic with a freeday is healing rebels, should that medic lose freeday? If so, how long must they heal said rebels?", FCVAR_NOTIFY, true, 0.0);
-	cvarTF2Jail[FreedayBeamLifetime] 		= CreateConVar("sm_tf2jr_freeday_beamtime", "10", "Time in seconds for the Freeday beam's lifetime.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	cvarTF2Jail[RoundStartMuteTime] 		= CreateConVar("sm_tf2jr_roundstart_mute_time", "20", "How long should prisoners at the beginning of the round be muted for?", FCVAR_NOTIFY, true, 0.0, true, 30.0);
+	//cvarTF2Jail[FreedayBeamLifetime] 		= CreateConVar("sm_tf2jr_freeday_beamtime", "10", "Time in seconds for the Freeday beam's lifetime.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 
 	AutoExecConfig(true, "TF2JailRedux");
 
@@ -702,11 +704,11 @@ public Action Timer_PlayerThink(Handle timer)
 			if (!player.bIsFreeday)
 				continue;
 			/* Props to <eVa>Dog */
-			float vecOrigin[3]; GetClientAbsOrigin(i, vecOrigin);
+			/*float vecOrigin[3]; GetClientAbsOrigin(i, vecOrigin);
 			TE_SetupBeamPoints(vecOld[i], vecOrigin, iLaserBeam, iHalo2, 0, 0, cvarTF2Jail[FreedayBeamLifetime].FloatValue, 20.0, 10.0, 5, 0.0, {255, 25, 25, 255}, 30);
 			TE_SendToAll();
 
-			vecOld[i] = vecOrigin;
+			vecOld[i] = vecOrigin;*/
 
 			if (TF2_GetPlayerClass(i) == TFClass_Medic)
 			{
