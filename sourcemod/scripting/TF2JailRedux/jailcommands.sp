@@ -1185,7 +1185,8 @@ public Action Command_WardenMarker(int client, int args)
 		return Plugin_Handled;
 	}
 
-	CreateMarker(client);
+	PlaceMarker(client);
+	//CreateMarker(client);
 	return Plugin_Handled;
 }
 

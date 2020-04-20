@@ -59,6 +59,8 @@
 #define BLU 				3
 #define MAX_TF_PLAYERS 		34	// 32 + replay + console
 
+int g_iMarker[2] =  { INVALID_ENT_REFERENCE, ... };
+
 enum	// Cvar name
 {
 	Balance = 0,
@@ -548,6 +550,101 @@ public void OnMapEnd()
 	gamemode.iLRPresetType = -1;
 }
 
+bool GetAimDestination(int client, float destination[3])
+{
+	float vOrigin[3], vAngles[3];
+	GetClientEyePosition(client, vOrigin);
+	GetClientEyeAngles(client, vAngles);
+	
+	
+	Handle TraceRay = TR_TraceRayFilterEx(vOrigin, vAngles, MASK_SOLID, RayType_Infinite, TraceRayFilter);
+	
+	if (TR_DidHit(TraceRay))
+	{
+		TR_GetEndPosition(destination, TraceRay);
+		
+		destination[2] += 16;
+		return true;
+	}
+	
+	CloseHandle(TraceRay);
+	return false;
+}
+
+
+void PlaceMarker(int iClient)
+{
+	//if (g_iMarkerTimer > cvarTF2Jail[Markers].FloatValue)
+	//{
+		//CPrintToChat(iClient, "{yellow}Savita Gaming {white}| Marker is on cool-down for another %i seconds", g_iMarkerTimer - 7);
+		//return;
+	//}
+	
+	KillMarker();
+	float fEyeAngles[3]; GetClientEyeAngles(iClient, fEyeAngles);
+	float fEyes[3]; GetClientEyePosition(iClient, fEyes);
+	float fAim[3]; GetAimDestination(iClient, fAim);
+	
+	float fLife = 1.0; float fWidth = 30.0; int iColor[4] =  { 25, 185, 214, 255 };
+	float fInitRadius = 0.0; float fEndRadius = 300.0;
+	
+	
+	//TE_SetupBeamRingPoint(vecPos, 300.0, 300.1, iLaserBeam, iHalo, 0, 10, time, 2.0, 0.0, {255, 255, 255, 255}, 10, 0);
+	//TE_SendToAll();
+	//EmitAmbientSound("misc/rd_finale_beep01.wav", vecPos); EmitAmbientSound("misc/rd_finale_beep01.wav", vecPos);
+	
+	TE_SetupBeamPoints(fEyes, fAim, iLaserBeam, 0, 0, 0, fLife, fWidth, 0.0, 1, 0.0, iColor, 15);
+	TE_SendToAll();
+	
+	TE_SetupBeamRingPoint(fAim, fInitRadius, fEndRadius, iLaserBeam, 0, 0, 0, 3.0, 10.0, 0.0, iColor, 300, FBEAM_NOTILE);
+	TE_SendToAll();
+	
+	gamemode.bMarkerExists = true;
+	SetPawnTimer(ResetMarker, 1.0);
+	
+	int iMarkerModel = CreateDummyEntity(fEyeAngles, fAim); g_iMarker[0] = EntIndexToEntRef(iMarkerModel);
+	//int iBubble = CreateTrainingAnnotation(fAim); g_iMarker[1] = EntIndexToEntRef(iBubble);
+	
+	//EmitSoundToAll("coach/coach_look_here.wav");
+}
+
+void KillMarker()
+{
+	int iMarkerModel = EntRefToEntIndex(g_iMarker[0]); int iBubble = EntRefToEntIndex(g_iMarker[1]);
+	if (IsValidEntity(iMarkerModel))
+		AcceptEntityInput(iMarkerModel, "Kill");
+	
+	if (IsValidEntity(iBubble))
+	{
+		SetEntPropFloat(iBubble, Prop_Data, "m_flLifetime", 0.0);
+		AcceptEntityInput(iBubble, "Show");
+		AcceptEntityInput(iBubble, "Kill");
+	}
+	
+	g_iMarker[0] = INVALID_ENT_REFERENCE; g_iMarker[1] = INVALID_ENT_REFERENCE;
+}
+
+int CreateDummyEntity(float fAngles[3], float fOrigin[3])
+{
+	fAngles[0] = 0.0;
+	fAngles[1] -= 90;
+	fAngles[2] = 0.0;
+
+	fOrigin[2] -= 8.0;
+	int iEnt = CreateEntityByName("prop_dynamic"); char sOutput[64];
+
+	Format(sOutput, sizeof(sOutput), "OnUser1 !self:kill::%.1f:1", 10.0);
+	SetVariantString(sOutput);
+	AcceptEntityInput(iEnt, "AddOutput");
+	AcceptEntityInput(iEnt, "FireUser1");
+	DispatchKeyValueVector(iEnt, "origin", fOrigin);
+	DispatchKeyValueVector(iEnt, "angles", fAngles);
+	DispatchKeyValue(iEnt, "model", "models/props_mvm/mvm_revive_tombstone.mdl");
+	DispatchSpawn(iEnt);
+
+	return iEnt;
+}
+
 public void OnClientConnected(int client)
 {
 	if (hJailFields[client])
@@ -856,6 +953,10 @@ public Action OnEntTakeDamage(int victim, int &attacker, int &inflictor, float &
 		PrintCenterTextAll("%t", "Hit Vent", attacker);
 	}
 	return Plugin_Continue;
+}
+
+public bool TraceRayFilter(int Entity, int Content) {
+	return Entity > MaxClients;
 }
 
 public void PreThink(int client)
