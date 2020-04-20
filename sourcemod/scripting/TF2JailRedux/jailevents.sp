@@ -79,12 +79,19 @@ public Action OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 	
 	if(CheckClass[client])
 		CreateTimer(0.1, SlayPlayer, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
-		
-	g_bRespawned[client] = false;
+	
+	CreateTimer(5.0, AntiKill, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 
 	player.flHealTime = 0.0;
 
 	return Plugin_Continue;
+}
+
+public Action AntiKill(Handle timer, any userid)
+{
+	int client = GetClientOfUserId(userid);
+	
+	g_bRespawned[client] = false;
 }
 
 public Action SlayPlayer(Handle timer, any userid)
@@ -102,7 +109,7 @@ public Action FailsafeSlay(Handle timer, any userid)
 {
 	int client = GetClientOfUserId(userid);
 	
-	if(gamemode.iRoundState == StateRunning && g_bRespawned[userid])
+	if(gamemode.iRoundState == StateRunning && !g_bRespawned[userid])
 	{
 		SDKHooks_TakeDamage(client, client, client, 450.0);
 	}
