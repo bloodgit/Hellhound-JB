@@ -9,7 +9,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 
-//#define USE_NEW_HALE_MODEL	// Un-comment this to use the Jungle Inferno Saxton Hale model (if you have it in your server)
+#define USE_NEW_HALE_MODEL	// Un-comment this to use the Jungle Inferno Saxton Hale model (if you have it in your server)
 
 #define RED 				2
 #define BLU 				3
