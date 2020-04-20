@@ -30,7 +30,7 @@
 
 - No armoury or medic room camping. (This means staying in those rooms and waiting for others to come to you.)
 - No glitching weapons or entities. (T-Model glitching & spawning weapons on red on roundstart, for example.)
-- By default, last wardens orders DO NOT apply, this means the new warden has to state "Continue previous wardens orders" to keep those last orders in effect.
+- By default, last wardens orders DO NOT apply when a new warden is picked, this means the new warden has to state "Continue previous wardens orders" to keep those last orders in effect, however when the current warden dies you must stick to the last orders.
 - Ghosting is not allowed. (This means talking whilst dead to give out information for the players currently alive, the only exception to this rule being if the people in question are the last red alive & are delaying.)
 - No force-baiting. (This means running at the enemy team then walking back to get them to try run at you and hit them.)
 - False accusations and / locations whilst not rebelling is not allowed. (As a rebel, you may state where you may be and what you may doing to try confuse the blues, however this cannot be done for more than 3 times per round.)
